@@ -49,10 +49,10 @@ $('#chips').addEventListener('click', e => { const b = e.target.closest('[data-k
 
 function statTiles(list, s) {
   const tiles = [
-    ['队列人数', s.n, '人', `占研究数据库 ${pct(s.n, patients.length)}%`],
+    ['队列人数', fmtN(s.n), '人', `占研究数据库 ${pct(s.n, patients.length)}%`],
     ['年龄中位数', s.ageMedian ?? '—', '岁', `女性 ${s.female}%`],
     ['病程中位数', s.durationMedian ?? '—', '年', `血清学阳性 ${s.sero}%`],
-    ['达标率', s.target, '%', `${s.evaluable} 位可评估 · DAS28 ≤ 3.2`],
+    ['达标率', s.target, '%', `${fmtN(s.evaluable)} 位可评估 · DAS28 ≤ 3.2`],
     ['资料完整', s.complete, '%', `${list.filter(p => p.incomplete).length} 位待补全`]
   ];
   return tiles.map(([l, v, u, n]) => `<div class="stat-tile"><span>${l}</span><strong>${v}<small>${u}</small></strong><em>${n}</em></div>`).join('');
