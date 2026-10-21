@@ -76,3 +76,13 @@
 .project-overview-cards article:nth-child(4) strong {
   color:#a55f05;
 }
+
+/* v2 入组趋势 */
+.enroll-chart{padding:6px 2px 0}
+.enroll-bars{display:flex;align-items:flex-end;gap:3px;height:180px;padding-bottom:20px;border-bottom:1px solid #e6ecf3;position:relative}
+.enroll-col{flex:1;height:100%;display:flex;align-items:flex-end;position:relative;cursor:default}
+.enroll-col i{display:block;width:100%;border-radius:3px 3px 0 0;background:linear-gradient(180deg,#5a8ce0,#0b5ccc);min-height:2px;transform-origin:bottom;animation:colGrow .6s ease both}
+.enroll-col:hover i{background:#084cae}
+.enroll-col small{position:absolute;left:0;bottom:-20px;color:#8a98ac;font-size:11px;white-space:nowrap}
+@keyframes colGrow{from{transform:scaleY(0)}}
+.viz-tip{position:fixed;z-index:120;background:#1f2d3d;color:#fff;font-size:12px;padding:6px 10px;border-radius:7px;pointer-events:none;box-shadow:0 6px 18px rgba(20,40,70,.2)}

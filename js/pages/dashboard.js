@@ -4,7 +4,7 @@
 shell('dashboard');
 
 const section = (title, note = "") => `<div class="section-heading"><h2>${title}</h2><p>${note}</p></div>`;
-const metric = (label, value, note, suffix = "人", tone = "", href = "") => `<${href ? `a href="${href}"` : 'article'} class="panel ${tone}${href ? ' metric-link' : ''}"><p class="metric-label">${label}</p><div class="metric-value">${value}<small>${suffix}</small></div><p class="metric-note">${note}</p></${href ? 'a' : 'article'}>`;
+const metric = (label, value, note, suffix = "人", tone = "", href = "") => `<${href ? `a href="${href}"` : 'article'} class="panel ${tone}${href ? ' metric-link' : ''}"><p class="metric-label">${label}</p><div class="metric-value"><span data-count="${typeof value === 'number' && value >= 1000 ? fmtN(value) : value}">0</span><small>${suffix}</small></div><p class="metric-note">${note}</p></${href ? 'a' : 'article'}>`;
 const lines = items => items.map(([name, value, href]) => `<div class="detail-line"><span>${href ? `<a href="${href}">${name}</a>` : name}</span><b>${value}</b></div>`).join("");
 const md = d => d ? d.slice(5).replace('-', '/') : '—';
 
@@ -24,6 +24,11 @@ const incomplete = patients.filter(p => p.incomplete);
 const byMissing = MISSING_ITEMS.map(m => [m, incomplete.filter(p => p.missing === m).length]);
 const validSample = patients.filter(p => p.visits > 0 && !p.incomplete && !p.lost).length;
 const totalVisits = patients.reduce((s, p) => s + (p.visits || 0), 0);
+const centers = [...patients.reduce((m, p) => m.set(p.center, (m.get(p.center) || 0) + 1), new Map())].sort((a, b) => b[1] - a[1]);
+// 治疗转归：入组以来首末两次 DAS28 的变化
+const trendOf = p => { const c = aiOf(p), v = (c.series || []).filter(x => x.das != null); return v.length >= 2 ? v.at(-1).das - v[0].das : null; };
+const tr = { better: 0, stable: 0, worse: 0, n: 0 };
+patients.forEach(p => { const d = trendOf(p); if (d == null) return; tr.n++; d <= -0.6 ? tr.better++ : d >= 0.6 ? tr.worse++ : tr.stable++; });
 
 // 风险名单（可逐人查看）
 const RISK_LISTS = {
@@ -36,15 +41,18 @@ const recentVisits = patients.filter(p => p.last && p.visits).sort((a, b) => b.l
 
 $('#stat-date').textContent = `全部研究中心 · 统计截至 ${ymd(TODAY)}，随数据实时更新`;
 $('#dashboard').innerHTML =
-  section('患者规模', '活跃指近 6 个月内有随访记录') + `<div class="metric-grid">${metric('总患者数', N, '覆盖 1 家研究中心', '人', '', 'patients.html')}${metric('活跃患者数', active, `占全部患者 ${pct(active, N)}%`, '人', 'metric-success')}${metric('本月新增患者', newThisMonth, `${thisMonth.replace('-', ' 年 ')} 月`)}${metric('已脱落 / 失访', lost, '不再纳入随访计划', '人', 'metric-danger')}</div>` +
-  section('随访管理', '按「上次随访 + 患者随访周期」推算') + `<div class="metric-grid">${metric('已逾期', fu.overdue, '优先安排随访', '人', 'metric-warning', 'followups.html?status=overdue')}${metric('7 日内待随访', fu.d7, '需提前电话确认', '人', '', 'followups.html?status=soon')}${metric('30 日内待随访', fu.d30, '含 7 日内')}${metric('按期随访率', onTime, `${plans.length} 项随访计划`, '%', 'metric-success')}</div><a class="panel-link" href="followups.html">进入随访管理 →</a>` +
+  section('患者规模', '活跃指近 6 个月内有随访记录') + `<div class="metric-grid">${metric('总患者数', N, `覆盖 ${centers.length} 家研究中心`, '人', '', 'patients.html')}${metric('活跃患者数', active, `占全部患者 ${pct(active, N)}%`, '人', 'metric-success')}${metric('本月新增患者', newThisMonth, `${thisMonth.replace('-', ' 年 ')} 月`)}${metric('已脱落 / 失访', lost, '不再纳入随访计划', '人', 'metric-danger')}</div>` +
+  section('随访管理', '按「上次随访 + 患者随访周期」推算') + `<div class="metric-grid">${metric('已逾期', fu.overdue, '优先安排随访', '人', 'metric-warning', 'followups.html?status=overdue')}${metric('7 日内待随访', fu.d7, '需提前电话确认', '人', '', 'followups.html?status=soon')}${metric('30 日内待随访', fu.d30, '含 7 日内')}${metric('按期随访率', onTime, `${fmtN(plans.length)} 项随访计划`, '%', 'metric-success')}</div><a class="panel-link" href="followups.html">进入随访管理 →</a>` +
   `<div class="dashboard-grid"><article class="panel"><h3>需关注患者</h3><div class="metric-value danger-text">${cnt({ act: 'mod-high' })}<small>人未达标（中高疾病活动）</small></div>${[['炎症指标升高（CRP > 10）', inflam, ''], ['高疾病活动（DAS28 > 5.1）', cnt({ act: 'high' }), 'ai-cohort.html?act=high'], ['合并 FM · 评分需复核', cnt({ cm: 'FM' }), 'ai-cohort.html?cm=FM']].map(([n, v, h]) => `<div class="progress-row"><span>${h ? `<a href="${h}">${n}</a>` : n}</span><progress value="${v}" max="${N}" aria-label="${n} ${v} 人"></progress><b>${v}</b></div>`).join('')}<p class="metric-note">同一患者可计入多项，以最近一次访视为准。</p></article>
-  <article class="panel"><h3>疾病活动度 · DAS28-CRP</h3><p class="metric-note">最近一次评分分布 · 达标率 ${S.target}%</p>${S.distNow.map(d => `<div class="detail-line"><span><a href="ai-cohort.html?act=${d.key}">${d.label}</a></span><b>${d.n} 人 · ${pct(d.n, S.evaluable)}%</b></div>`).join('')}</article>
+  <article class="panel"><h3>疾病活动度 · DAS28-ESR</h3><p class="metric-note">最近一次评分分布 · 达标率 ${S.target}%</p>${S.distNow.map(d => `<div class="detail-line"><span><a href="ai-cohort.html?act=${d.key}">${d.label}</a></span><b>${fmtN(d.n)} 人 · ${pct(d.n, S.evaluable)}%</b></div>`).join('')}</article>
   <article class="panel"><h3>数据质量</h3><div class="metric-value">${pct(N - incomplete.length, N)}%<small>患者资料完整率</small></div>${lines(byMissing.map(([m, n]) => [m, `${n} 人`, `data-quality.html?type=${encodeURIComponent('缺失')}`]))}<a class="panel-link" href="data-quality.html">进入数据质控 →</a></article>
-  <article class="panel"><h3>研究数据</h3>${lines([['有效研究样本数', `${validSample} 人`], ['累计完成访视', `${totalVisits} 次`], ['当前方案持续 ≥ 12 个月', `${patients.filter(p => aiOf(p).months >= 12).length} 人`], ['近 90 天有随访', `${patients.filter(p => within(p.last, 90)).length} 人`]])}<a class="panel-link" href="ai-cohort.html">进入队列分析 →</a></article></div>` +
+  <article class="panel"><h3>研究数据</h3>${lines([['有效研究样本数', `${fmtN(validSample)} 人`], ['累计完成访视', `${fmtN(totalVisits)} 次`], ['当前方案持续 ≥ 12 个月', `${fmtN(patients.filter(p => aiOf(p).months >= 12).length)} 人`], ['近 90 天有随访', `${fmtN(patients.filter(p => within(p.last, 90)).length)} 人`]])}<a class="panel-link" href="ai-cohort.html">进入队列分析 →</a></article></div>` +
+  section('治疗转归', `入组以来首末两次 DAS28-ESR 比较 · ${fmtN(tr.n)} 位可评估患者`) + `<div class="metric-grid">${metric('病情改善', tr.better, `DAS28 下降 ≥ 0.6 · 占 ${pct(tr.better, tr.n)}%`, '人', 'metric-success', 'patients.html?trend=better')}${metric('病情稳定', tr.stable, `变化 < 0.6 · 占 ${pct(tr.stable, tr.n)}%`, '人', '', 'patients.html?trend=stable')}${metric('病情加重', tr.worse, `DAS28 上升 ≥ 0.6 · 占 ${pct(tr.worse, tr.n)}%`, '人', 'metric-danger', 'patients.html?trend=worse')}${metric('入组以来调整方案', patients.filter(p => p._m && p._m.phases.length > 1).length, '升级至生物制剂 / JAK 抑制剂')}</div>` +
+  section('研究中心', `${centers.length} 家中心 · 按入组人数排序`) + `<article class="panel center-panel"><div class="center-bars">${centers.map(([c, n], i) => `<a class="center-bar" href="patients.html?center=${encodeURIComponent(c)}" title="查看${escapeHTML(c)}的患者"><span class="center-rank">${i + 1}</span><span class="center-name">${escapeHTML(c)}</span><span class="center-track"><i style="width:${(n / centers[0][1] * 100).toFixed(1)}%"></i></span><b>${fmtN(n)}</b></a>`).join('')}</div></article>` +
   section('风险提醒', '点击卡片查看名单') + `<div class="risk-grid">${Object.entries(RISK_LISTS).map(([id, r]) => `<button class="panel risk-card" data-risk="${id}" aria-label="查看${r.name}，${r.list.length}人"><span class="risk-card-heading"><strong>${r.name}</strong>${badge(r.level + '风险', r.level === '高' ? 'danger' : 'warning')}</span><span class="metric-value danger-text">${r.list.length}<small>人</small></span><span class="metric-note">${r.note}</span><span class="risk-link">查看风险患者 ${icon('chevron')}</span></button>`).join('')}</div>` +
   section('近期动态', '按最近一次访视日期') + `<div class="dashboard-grid"><article class="panel"><h3>最近炎症指标偏高</h3>${recentAbn.map(p => `<div class="activity"><b><a href="patient-insight.html?id=${encodeURIComponent(p.id)}">${escapeHTML(p.name)}</a></b><span>CRP ${fmt1(aiOf(p).crpNow)} mg/L</span><time>${md(p.last)}</time></div>`).join('')}</article><article class="panel"><h3>最近完成随访</h3>${recentVisits.map(p => `<div class="activity"><b><a href="patient-visits.html?id=${encodeURIComponent(p.id)}">${escapeHTML(p.name)}</a></b><span>第 ${p.visits} 次随访 · 已完成</span><time>${md(p.last)}</time></div>`).join('')}</article></div>` +
-  `<p class="dashboard-note">统计口径：资料完整指建档必填项、DAS28 评分、基线检验、合并疾病与用药史均已录入；DAS28 等分析字段为演示数据（规则生成），与 AI 分析页同源。</p>`;
+  `<p class="dashboard-note">统计口径：资料完整指建档必填项、DAS28 评分、基线检验、合并疾病与用药史均已录入；疾病活动度以最近一次有评分的访视为准，与 AI 分析页同源。</p>`;
+countUp($('#dashboard'));
 
 function showRisk(id) {
   const r = RISK_LISTS[id]; if (!r) return;
@@ -60,7 +68,7 @@ document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('c
 function previewCohort() {
   const q = $('#cohort-q').value.trim(), r = parseQuestion(q), list = applyFilters(r.filters), s = cohortStats(list, r.filters.at);
   const chips = filterChips(r.filters);
-  $('#cohort-chips').innerHTML = chips.length ? chips.map(c => `<span>${escapeHTML(c.label)}</span>`).join('') : '<span>未识别到条件 · 将以研究库全部患者为队列</span>';
+  $('#cohort-chips').innerHTML = chips.length ? chips.map(c => `<span>${escapeHTML(c.label)}</span>`).join('') : '<span>未识别到条件 · 将以研究数据库全部患者为队列</span>';
   $('#cohort-result').innerHTML = [[list.length, '符合条件患者'], [s.complete + '%', '资料完整度'], [list.filter(p => aiOf(p).months >= 3).length, '方案 ≥ 3 个月'], [list.filter(p => aiOf(p).months >= 6).length, '方案 ≥ 6 个月']].map(([v, l]) => `<div><strong>${v}</strong><span>${l}</span></div>`).join('');
 }
 $('#cohort-form').addEventListener('submit', e => { e.preventDefault(); previewCohort(); });
@@ -70,5 +78,5 @@ previewCohort();
 $('#export-report')?.addEventListener('click', () => {
   const rows = [['统计时间', ymd(TODAY)], ['指标', '数值'], ['总患者数', N], ['活跃患者数', active], ['本月新增患者', newThisMonth], ['已脱落/失访', lost], ['随访已逾期', fu.overdue], ['7日内待随访', fu.d7], ['30日内待随访', fu.d30], ['按期随访率', onTime + '%'], ['达标率', S.target + '%'], ...S.distNow.map(d => [d.label, d.n]), ['资料完整率', pct(N - incomplete.length, N) + '%'], ...byMissing, ['有效研究样本数', validSample], ['累计完成访视', totalVisits], ...Object.values(RISK_LISTS).map(r => [r.name, r.list.length])];
   const csv = '﻿' + rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\r\n');
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); const a = document.createElement('a'); a.href = url; a.download = `RA-统计报表-${ymd(TODAY)}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); const a = document.createElement('a'); a.href = url; a.download = `RA-统计报表-${ymd(TODAY)}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); toast('统计报表已导出', 'ok');
 });

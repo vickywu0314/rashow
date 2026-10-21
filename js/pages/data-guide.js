@@ -24,7 +24,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   // 点击目录：立即选中并平滑滚动，滚动期间不被滚动监听覆盖
   links.forEach((a,i)=>a.addEventListener('click',e=>{const s=secs[i];if(!s)return;e.preventDefault();setActive(s);lockUntil=Date.now()+900;s.scrollIntoView({behavior:'smooth',block:'start'});history.replaceState(null,'',a.getAttribute('href'));}));
   addEventListener('scroll',sync,{passive:true});sync();
-  // 清空本机演示数据（新建患者、随访、档案修改、质控处理、修改记录）
-  document.getElementById('reset-demo')?.addEventListener('click',()=>{if(!confirm('确定清空本机保存的演示数据？新建的患者、录入的随访和修改记录都会被删除。'))return;resetStore();try{Object.keys(sessionStorage).filter(k=>k.startsWith('list:')).forEach(k=>sessionStorage.removeItem(k))}catch(e){}location.reload();});
+  // 清空本机录入（新建患者、随访、档案修改、质控处理、修改记录）；也可访问 data-guide.html?reset=1
+  document.getElementById('reset-demo')?.addEventListener('click',()=>{if(!confirm('确定清空本机录入的数据？新建的患者、录入的随访和修改记录都会被删除。'))return;resetStore();try{Object.keys(sessionStorage).filter(k=>k.startsWith('list:')).forEach(k=>sessionStorage.removeItem(k))}catch(e){}location.reload();});
   flashHashTarget();
 });
+
+if(new URLSearchParams(location.search).get('reset')==='1'&&confirm('确定清空本机录入的数据？新建的患者、录入的随访和修改记录都会被删除。')){resetStore();try{Object.keys(sessionStorage).filter(k=>k.startsWith('list:')).forEach(k=>sessionStorage.removeItem(k))}catch(e){}location.replace('data-guide.html')}

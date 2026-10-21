@@ -818,3 +818,4 @@
     grid-template-columns:1fr 1fr;
   }
 }
+.ai-filled{background:#f3f0ff!important;border-color:#b9acf5!important;transition:background 1.5s}

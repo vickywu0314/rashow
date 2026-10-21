@@ -24,8 +24,8 @@ function showParse(matched) {
   const box = $('#parse-note');
   box.hidden = false;
   box.innerHTML = matched.length
-    ? `<span class="demo-flag">规则解析</span> 识别到：${matched.map(escapeHTML).join('、')}。以下条件可直接修改或删除。`
-    : '<span class="demo-flag">规则解析</span> 未识别到可用条件，已展示研究库整体；可在下方手动选择条件。';
+    ? `<span class="demo-flag">AI 解析</span> 识别到：${matched.map(escapeHTML).join('、')}。以下条件可直接修改或删除。`
+    : '<span class="demo-flag">AI 解析</span> 未识别到可用条件，已展示研究数据库整体；可在下方手动选择条件。';
 }
 
 // 条件 ↔ 下拉框
@@ -43,13 +43,13 @@ function renderChips() {
   const chips = filterChips(filters);
   $('#chips').innerHTML = chips.length
     ? chips.map(c => `<span class="cond-chip">${escapeHTML(c.label)}<button type="button" data-key="${c.key}" aria-label="移除条件 ${escapeHTML(c.label)}">×</button></span>`).join('')
-    : '<span class="cond-empty">未设置条件 · 当前为研究库全部患者</span>';
+    : '<span class="cond-empty">未设置条件 · 当前为研究数据库全部患者</span>';
 }
 $('#chips').addEventListener('click', e => { const b = e.target.closest('[data-key]'); if (!b) return; filters[b.dataset.key] = AI_FILTER_DEFAULT[b.dataset.key]; update(); });
 
 function statTiles(list, s) {
   const tiles = [
-    ['队列人数', s.n, '人', `占研究库 ${pct(s.n, patients.length)}%`],
+    ['队列人数', s.n, '人', `占研究数据库 ${pct(s.n, patients.length)}%`],
     ['年龄中位数', s.ageMedian ?? '—', '岁', `女性 ${s.female}%`],
     ['病程中位数', s.durationMedian ?? '—', '年', `血清学阳性 ${s.sero}%`],
     ['达标率', s.target, '%', `${s.evaluable} 位可评估 · DAS28 ≤ 3.2`],
@@ -90,7 +90,7 @@ function update() {
     { label: filters.at === '6m' ? '治疗 6 个月' : '最近访视', dist: s.distNow }
   ]);
   $('#chart-tx').innerHTML = barList(s.byTx.filter(g => g.n).map(g => ({ label: g.tx, value: g.rate, n: g.n })), { note: it => `${it.n} 人` })
-    + `<p class="panel-note">研究库整体达标率 ${lib.target}% · 组间基线不同，差异不代表疗效差异</p>`;
+    + `<p class="panel-note">研究数据库整体达标率 ${lib.target}% · 组间基线不同，差异不代表疗效差异</p>`;
   $('#chart-line').innerHTML = barList(s.lines.map(l => ({ label: `${l.line} 线治疗`, value: pct(l.n, s.n), n: l.n })), { note: it => `${it.n} 人` })
     + `<p class="panel-note">1 线：csDMARD；2 线：首个生物 / 靶向药；3 线：换用第二种生物 / 靶向药</p>`;
   $('#compare').innerHTML = compareTable(list);

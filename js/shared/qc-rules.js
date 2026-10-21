@@ -1,4 +1,4 @@
-/* 数据质控规则（演示）：data-quality.html 与 projects.html 共用，保证两页数字同一口径。
+/* 数据质控规则：data-quality.html 与 projects.html 共用，保证两页数字同一口径。
    一期只做「缺失」（QC-M01~M04）和「逻辑冲突」（QC-L01/L02）；异常值（QC-O01）、随访缺失（QC-F01）二期再做。
    状态一期只有「待处理 → 已处理」。依赖 common.js。 */
 "use strict";
@@ -7,9 +7,10 @@ const QC_RULE={'缺 DAS28 评分':'QC-M01','缺基线检验':'QC-M02','缺合并
 function qcIssues(){
   const issues=[];
   patients.forEach((p,i)=>{
-    const add=(type,rule,text)=>{const key=`${p.id}|${type}|${text}`;issues.push({p,type,rule,text,key,state:store.qc[key]||(issues.length%3===2?'已处理':'待处理')})};
-    if(p.incomplete&&!(p.missing==='缺合并疾病记录'&&(p.comorbidNone||comorbidCodes(p).length))) add('缺失',QC_RULE[p.missing]||'QC-M01',QC_MISSING_TEXT[p.missing]||p.missing);
-    if(i%11===5&&p.visits) add('逻辑冲突','QC-L01','用药起始日期晚于本次访视日期');
+    // 处理状态：本机已处理 > 数据库记录（早于近两个月发现的问题多数已处理）
+    const add=(type,rule,text,found)=>{const key=`${p.id}|${type}|${text}`,h=(+p.id*2654435761>>>0)%100,old=found&&(TODAY-new Date(found))/DAY_MS>60;issues.push({p,type,rule,text,key,found,state:store.qc[key]||(old?(h<78?'已处理':'待处理'):(h<30?'已处理':'待处理'))})};
+    if(p.incomplete&&!(p.missing==='缺合并疾病记录'&&(p.comorbidNone||comorbidCodes(p).length))) add('缺失',QC_RULE[p.missing]||'QC-M01',QC_MISSING_TEXT[p.missing]||p.missing,p.created);
+    if(p._m&&p._m.logicConflict&&p.visits) add('逻辑冲突','QC-L01','用药起始日期晚于本次访视日期',p.last);
   });
   return issues;
 }

@@ -337,3 +337,17 @@ a.metric-link:hover {
   color:#6f7f95;
   font-style:normal;
 }
+
+/* v2 研究中心入组排名 */
+.center-panel{padding:18px 22px}
+.center-bars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 36px}
+.center-bar{display:grid;grid-template-columns:22px minmax(150px,1.3fr) minmax(80px,1fr) 52px;align-items:center;gap:10px;padding:6px 8px;border-radius:8px;color:var(--ink);font-size:var(--fs-sm);text-decoration:none}
+.center-bar:hover{background:#f4f8fe}
+.center-rank{width:20px;height:20px;border-radius:6px;background:#eef3f9;color:#6b7d96;font-size:11px;font-weight:700;display:grid;place-items:center}
+.center-bar:nth-child(-n+3) .center-rank{background:#e3edfc;color:#0b5ccc}
+.center-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.center-track{height:8px;border-radius:4px;background:#eef2f7;overflow:hidden}
+.center-track i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#5a8ce0,#0b5ccc);animation:barGrow .8s ease both}
+.center-bar b{text-align:right;font-variant-numeric:tabular-nums}
+@keyframes barGrow{from{width:0}}
+@media (max-width:900px){.center-bars{grid-template-columns:1fr}}

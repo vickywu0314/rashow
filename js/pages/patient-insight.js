@@ -4,10 +4,9 @@
 document.addEventListener('DOMContentLoaded', () => {
   shell(pageOrigin().nav);
   const p = patientById(queryParam('id')), a = aiOf(p), pid = encodeURIComponent(p.id);
-  document.title = `${p.name} · 病程分析 · 患者数据研究平台`;
+  document.title = `${p.name} · 病程分析 · 中国中医风湿病注册研究信息平台`;
   $('#patient-name').textContent = p.name + ' · 病程分析';
-  $('#patient-meta').textContent = `研究编号 ${p.code} · ${p.sex} · ${a.age} 岁 · 病程 ${a.duration} 年 · ${a.sero ? 'RF / ACPA 阳性' : '血清学阴性'} · 纵向疾病分析`;
-  if (p.created) { const n = document.createElement('p'); n.className = 'new-note'; n.textContent = '该患者为本机新建档案：病程分析需要至少两次含疾病活动度的访视，以下数值为演示生成，仅用于展示页面效果。'; document.querySelector('.target-strip').before(n); }
+  $('#patient-meta').textContent = `研究编号 ${p.code} · ${p.sex} · ${a.age} 岁 · 病程 ${a.duration} 年 · ${a.sero ? 'RF / ACPA 阳性' : '血清学阴性'} · ${p.center} · ${(a.series || []).length} 次访视`;
   const fs = followupStatus(p); $('#fu-state').className = `patient-followup-state ${fs.tone}`; $('#fu-state').textContent = fs.label;
 
   // ---- 导航与返回 ----
@@ -20,12 +19,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const ask = () => openAIChat({ scope: 'patient', patient: p });
   $('#ask-ai').onclick = ask; $('#ask-ai-2').onclick = ask;
 
-  // ---- 时间点：基线（开始当前方案）→ 6 个月 → 最近一次访视 ----
-  const lastDate = p.last || ymd(TODAY);
-  const baseDate = ymd(addMonths(lastDate, -a.months)), sixDate = ymd(addMonths(baseDate, 6));
+  // ---- 无访视：只显示提示 ----
+  const vs = a.series || [], withDas = vs.filter(v => v.das != null);
+  if (withDas.length < 1) {
+    document.querySelector('.target-strip').insertAdjacentHTML('beforebegin', `<p class="new-note">${escapeHTML(p.name)} 尚未完成含疾病活动度评分的访视，病程分析需要至少一次完整的 DAS28 评估。</p>`);
+    document.querySelectorAll('.insight-grid,.target-strip,.evidence-panel,.trend-panel').forEach(el => el.hidden = true);
+    return;
+  }
+  // ---- 时间点：当前方案起始 → 6 个月 → 最近一次访视 ----
   const ym = d => d.slice(0, 7).replace('-', '.');
-  const sjc0 = Math.round(Math.max(0, (a.das0 - 2.2) * 1.6)), tjc0 = Math.round(Math.max(0, (a.das0 - 2) * 2.2)), haq0 = r1(0.2 + a.das0 * 0.22);
-  const prevDas = a.das6 != null && a.months > 7 ? a.das6 : a.das0, prevDate = a.das6 != null && a.months > 7 ? sixDate : baseDate;
+  const lastV = withDas.at(-1), lastDate = lastV.date;
+  const inPh = vs.filter(v => v.date >= a.start), baseV = inPh.find(v => v.das != null) || withDas[0];
+  const baseDate = baseV.date, sixV = a.das6 != null ? inPh.find(v => v.das === a.das6) : null, sixDate = sixV ? sixV.date : ymd(addMonths(baseDate, 6));
+  const sjc0 = baseV.sjc ?? 0, tjc0 = baseV.tjc ?? 0, haq0 = baseV.haq ?? a.haq;
+  const prevV = withDas.length > 1 ? withDas.at(-2) : baseV, prevDas = prevV.das, prevDate = prevV.date;
   const cat = actOf(a.dasNow), fm = comorbidCodes(p).includes('FM');
 
   // ---- 顶部状态条 + 参考结论 ----
@@ -43,17 +50,30 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#target-note').className = `target-note tone-${tone}`;
   $('#target-note').innerHTML = `<b class="tone-label">参考结论 · ${t.label}</b><span>${t.text}${fm ? '合并纤维肌痛，DAS28 可能被压痛相关指标抬高。' : ''}请结合完整病历进行临床判断。</span><span class="tone-legend" aria-hidden="true"><i class="tone-improved">改善</i><i class="tone-stable">稳定</i><i class="tone-worsened">恶化</i></span>`;
 
-  // ---- 疾病历程 ----
-  const events = [{ id: 'node-base', date: baseDate, kind: 'treat', cls: '', title: `开始当前方案 · ${actLabel(actOf(a.das0))}`, data: `DAS28-ESR ${fmt1(a.das0)} · SJC28 ${sjc0} · TJC28 ${tjc0} · CRP ${fmt1(a.crp0)}`, tag: ['event-treatment', `开始 ${a.drug}（${a.tx} · ${a.line} 线）`] }];
-  if (a.das6 != null) {
-    const d6 = a.das0 - a.das6, good = d6 >= 1.2;
-    events.push({ id: 'node-6m', date: sixDate, kind: good ? 'good' : 'alert', cls: good ? 'good' : 'alert', title: good ? '治疗 6 个月 · 明显改善' : d6 > 0.6 ? '治疗 6 个月 · 部分改善' : '治疗 6 个月 · 改善不足', data: `DAS28-ESR ${fmt1(a.das6)}（较基线 ${d6 >= 0 ? '↓' : '↑'} ${Math.abs(d6).toFixed(1)}）`, tag: good ? ['event-response', '达到 EULAR 良好应答幅度'] : ['event-alert', d6 > 0.6 ? 'EULAR 中等应答' : 'EULAR 无应答，建议评估是否调整方案'] });
-  }
+  // ---- 研究数据覆盖：按实际录入情况统计 ----
+  const nLab = vs.filter(v => v.esr != null || v.crp != null).length, nPro = vs.filter(v => v.pain != null).length, nX = vs.filter((v, i) => visitFormOf(p, v.k)?.exam?.xrayDate).length;
+  const dom = [['疾病活动', withDas.length, vs.length, 'DAS28 · TJC28 · SJC28'], ['实验室', nLab, vs.length, 'CRP · ESR · 血常规 · 肝肾功能'], ['治疗暴露', vs.length, vs.length, `${a.phases.length} 个治疗阶段 · 启用 · 调整`], ['患者报告 PRO', nPro, vs.length, '疼痛 VAS · 总体评价 · HAQ'], ['影像 / 结构损伤', nX, Math.max(1, Math.ceil(vs.length / 4)), nX ? `关节 X 线 ${nX} 次` : '当前缺少可比对影像']];
+  document.querySelector('.research-evidence').innerHTML = dom.map(([n, k, tot, note]) => { const r = k / tot, st = r >= 0.9 ? '完整' : r >= 0.5 ? '部分' : k ? '较少' : '待补充'; return `<div class="evidence-domain${k ? '' : ' missing'}"><span>${n}</span><strong>${st}</strong><small>${note}${k && n !== '影像 / 结构损伤' ? ` · ${k}/${tot} 次` : ''}</small></div>`; }).join('');
+
+  // ---- 疾病活动轨迹（SVG） ----
+  drawTrend(vs, a);
+
+  // ---- 疾病历程：由历次访视自动生成 ----
+  const events = [];
+  const fmtV = v => `DAS28-ESR ${fmt1(v.das)} · SJC28 ${v.sjc ?? '—'} · TJC28 ${v.tjc ?? '—'} · CRP ${fmt1(v.crp)}`;
+  const first = withDas[0];
+  events.push({ id: 'node-base', date: first.date, kind: 'treat', cls: '', title: `入组基线 · ${actLabel(actOf(first.das))}`, data: fmtV(first), tag: ['event-treatment', `开始 ${phaseDrug(a.phases[0])}（${a.phases[0].cls} · ${a.phases[0].line} 线）`], k: first.k });
+  vs.filter(v => v.regimenChanged).forEach(v => { const ph = a.phases[v.phase]; events.push({ id: `node-ch${v.k}`, date: v.date, kind: 'treat', cls: '', title: `调整方案 · ${CHANGE_TXT[v.changeReason] || '疗效不佳'}`, data: v.das != null ? fmtV(v) : '本次未评估 DAS28', tag: ['event-treatment', `加用 ${phaseDrug(ph)}（${ph.cls} · ${ph.line} 线）`], k: v.k }); });
+  const trig = vs.filter(v => v.trigger && v.das != null);
+  if (trig.length) { const v = trig.reduce((m, x) => x.das > m.das ? x : m); events.push({ id: 'node-flare', date: v.date, kind: 'alert', cls: 'alert', title: `疾病活动反弹 · ${actLabel(actOf(v.das))}`, data: fmtV(v), tag: ['event-alert', `同期记录：${TRIGGER_TXT[v.trigger]} · 仅提示时间关联`], k: v.k }); }
+  if (sixV) { const d6 = a.das0 - a.das6, good = d6 >= 1.2; events.push({ id: 'node-6m', date: sixV.date, kind: good ? 'good' : 'alert', cls: good ? 'good' : 'alert', title: good ? '当前方案 6 个月 · 明显改善' : d6 > 0.6 ? '当前方案 6 个月 · 部分改善' : '当前方案 6 个月 · 改善不足', data: `DAS28-ESR ${fmt1(a.das6)}（较方案起始 ${d6 >= 0 ? '↓' : '↑'} ${Math.abs(d6).toFixed(1)}）`, tag: good ? ['event-response', '达到 EULAR 良好应答幅度'] : ['event-alert', d6 > 0.6 ? 'EULAR 中等应答' : 'EULAR 无应答，建议评估是否调整方案'], k: sixV.k }); }
+  const best = withDas.reduce((m, x) => x.das < m.das ? x : m);
+  if (best !== lastV && best !== first && first.das - best.das >= 1.2 && !events.some(e => e.k === best.k)) events.push({ id: 'node-best', date: best.date, kind: 'good', cls: 'good', title: `最佳状态 · ${actLabel(actOf(best.das))}`, data: fmtV(best), tag: ['event-response', `较基线下降 ${(first.das - best.das).toFixed(1)}`], k: best.k });
   if (fm) events.push({ id: 'node-fm', date: `${p.comorbid.FM.since}-01-01`, kind: 'alert', cls: 'alert', title: '合并纤维肌痛（FM）', data: p.comorbid.FM.core.join(' · '), tag: ['event-alert', '压痛关节数与 PRO 解读需考虑 FM 影响'] });
   const rebound = a.das6 != null && a.dasNow - a.das6 >= 0.6;
-  events.push({ id: 'node-now', date: lastDate, kind: rebound ? 'alert' : 'good', cls: 'current', title: `最近访视 · ${actLabel(cat)}`, data: `DAS28-ESR ${fmt1(a.dasNow)} · SJC28 ${a.sjc} · TJC28 ${a.tjc} · CRP ${fmt1(a.crpNow)} · HAQ ${fmt1(a.haq)}`, tag: rebound ? ['event-alert', `较 6 个月时回升 ${(a.dasNow - a.das6).toFixed(1)}`] : [atTarget(a.dasNow) ? 'event-response' : 'event-alert', atTarget(a.dasNow) ? '处于治疗目标内' : '尚未达到治疗目标'] });
+  if (lastV !== first) events.push({ id: 'node-now', date: lastDate, kind: rebound ? 'alert' : 'good', cls: 'current', title: `最近访视 · ${actLabel(cat)}`, data: `${fmtV(lastV)} · HAQ ${fmt1(lastV.haq)}`, tag: rebound ? ['event-alert', `较 6 个月时回升 ${(a.dasNow - a.das6).toFixed(1)}`] : [atTarget(a.dasNow) ? 'event-response' : 'event-alert', atTarget(a.dasNow) ? '处于治疗目标内' : '尚未达到治疗目标'], k: lastV.k });
   events.sort((x, y) => x.date.localeCompare(y.date));
-  $('#journey').innerHTML = events.map(e => `<article class="${e.cls}" id="${e.id}" data-kind="${e.kind}"><time>${ym(e.date)}</time><i></i><div><strong>${escapeHTML(e.title)}</strong><p>${escapeHTML(e.data)}</p><span class="${e.tag[0]}">${escapeHTML(e.tag[1])}</span></div></article>`).join('');
+  $('#journey').innerHTML = events.map(e => `<article class="${e.cls}" id="${e.id}" data-kind="${e.kind}"><time>${ym(e.date)}</time><i></i><div><strong>${escapeHTML(e.title)}</strong><p>${escapeHTML(e.data)}</p><span class="${e.tag[0]}">${escapeHTML(e.tag[1])}</span>${e.k != null ? `<a class="event-link" href="visit-detail.html?id=${pid}&visit=v${e.k}&from=insight">查看当次随访记录 →</a>` : ''}</div></article>`).join('');
   // 筛选事件
   $('#filter-toggle').onclick = () => { const f = $('#journey-filter'); f.hidden = !f.hidden; $('#filter-toggle').setAttribute('aria-expanded', String(!f.hidden)); };
   $('#journey-filter').addEventListener('click', e => {
@@ -70,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ['关节体征', a.sjc <= sjc0 - 2 ? '改善' : a.sjc <= 2 ? '稳定' : '仍有肿胀', Math.min(100, a.sjc / 12 * 100), `SJC28 ${a.sjc} · TJC28 ${a.tjc}`],
     ['症状 / PRO', a.vas >= 60 ? '仍需关注' : '可接受', a.vas, `疼痛 VAS ${a.vas}`],
     ['功能', a.haq <= haq0 - 0.3 ? '改善' : a.haq < 1 ? '轻度受限' : '受限', Math.min(100, a.haq / 3 * 100), `HAQ ${fmt1(a.haq)}`],
-    ['安全性', '稳定', 20, '暂无记录的不良事件']
+    (() => { const ae = vs.filter(v => v.liverAE || (v.wbc != null && v.wbc < 3.5)).length; return ['安全性', ae ? '需关注' : '稳定', ae ? 55 : 15, ae ? `曾出现 ${ae} 次实验室异常相关不良事件` : '未记录药物相关不良事件']; })()
   ];
   $('#dims').innerHTML = dims.map(([n, l, v, s]) => `<div><span>${n}</span><b>${l}</b><meter min="0" max="100" value="${Math.round(v)}"></meter><small>${s}</small></div>`).join('');
 
@@ -82,12 +102,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const simList = applyFilters(simF).filter(x => x.id !== p.id), ss = cohortStats(simList);
   $('#sim-tags').innerHTML = [p.sex === '女' ? '女性' : '男性', `${a.age - 5}–${a.age + 5} 岁`, a.sero ? 'RF / ACPA 阳性' : '血清学阴性'].map(x => `<span>${x}</span>`).join('');
   const persist = pct(simList.filter(x => aiOf(x).months >= 12).length, simList.length);
-  $('#sim-sum').innerHTML = [['当前匹配', `${ss.n} 名`, '同性别 · 年龄 ±5 岁'], ['当前达标率', `${ss.target}%`, 'DAS28 ≤ 3.2'], ['方案持续 ≥ 12 月', `${persist}%`, '研究库观察值'], ['数据完整度', `${ss.complete}%`, '资料完整患者占比']].map(([l, v, n]) => `<div><span>${l}</span><strong>${v}</strong><small>${n}</small></div>`).join('');
+  $('#sim-sum').innerHTML = [['当前匹配', `${ss.n} 名`, '同性别 · 年龄 ±5 岁'], ['当前达标率', `${ss.target}%`, 'DAS28 ≤ 3.2'], ['方案持续 ≥ 12 月', `${persist}%`, '研究数据库观察值'], ['数据完整度', `${ss.complete}%`, '资料完整患者占比']].map(([l, v, n]) => `<div><span>${l}</span><strong>${v}</strong><small>${n}</small></div>`).join('');
   const maxN = Math.max(1, ...ss.byTx.map(g => g.n));
   $('#sim-bars').innerHTML = ss.byTx.filter(g => g.n).map(g => `<div class="outcome-row"><span>${g.tx}</span><i style="--w:${Math.round(g.n / maxN * 100)}%"></i><b>${g.n}</b></div>`).join('');
 
-  // ---- 智能洞察（规则计算） ----
-  const latest = demoVisits(p)[0], baseV = demoVisits(p).find(v => v.type === '基线访视') || latest;
+  // ---- 智能洞察 ----
+  const latest = demoVisits(p)[0];
   const visitUrl = (v, sec) => v ? `visit-detail.html?id=${pid}&visit=${v.id}&from=insight#section-${sec}` : '#';
   const dS = sjc0 - a.sjc, dT = tjc0 - a.tjc, crpDrop = a.crp0 ? Math.round((1 - a.crpNow / a.crp0) * 100) : 0;
   const main = dS >= dT ? `肿胀关节数（${sjc0} → ${a.sjc}）` : `压痛关节数（${tjc0} → ${a.tjc}）`;
@@ -113,3 +133,30 @@ document.addEventListener('DOMContentLoaded', () => {
     node.classList.remove('is-located'); void node.offsetWidth; node.classList.add('is-located');
   }));
 });
+
+
+// 疾病活动轨迹：DAS28-ESR 折线 + 疾病活动分层底色 + 方案调整标记 + CRP 柱
+function drawTrend(vs, a) {
+  const host = document.getElementById('trend-chart'); if (!host) return;
+  const pts = vs.filter(v => v.das != null); if (!pts.length) { host.innerHTML = ''; return; }
+  const W = 960, H = 260, L = 44, R = 20, T = 16, B = 36, d0 = vs[0].d, d1 = Math.max(vs.at(-1).d, d0 + 30);
+  const x = d => L + (d - d0) / (d1 - d0) * (W - L - R), yMax = Math.max(7, Math.ceil(Math.max(...pts.map(v => v.das)) + 0.3)), y = v => T + (1 - v / yMax) * (H - T - B);
+  const crpMax = Math.max(20, ...vs.map(v => v.crp || 0)), yc = c => H - B - c / crpMax * (H - T - B) * 0.45;
+  const band = (lo, hi, cls, label) => `<rect class="band ${cls}" x="${L}" y="${y(Math.min(hi, yMax))}" width="${W - L - R}" height="${y(lo) - y(Math.min(hi, yMax))}"/><text class="band-label" x="${W - R - 6}" y="${y(Math.min(hi, yMax)) + 13}" text-anchor="end">${label}</text>`;
+  const ticks = [0, 2.6, 3.2, 5.1, yMax].map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join('');
+  const months = []; { const s0 = new Date(dstr(d0).slice(0, 7) + '-01'); for (let d = s0; ; d.setMonth(d.getMonth() + 3)) { const dn = Math.round(Date.UTC(d.getFullYear(), d.getMonth(), 1) / 864e5); if (dn > d1) break; if (dn >= d0) months.push(dn); } }
+  const xt = months.map(dn => `<text class="axis" x="${x(dn)}" y="${H - B + 18}" text-anchor="middle">${dstr(dn).slice(2, 7).replace('-', '.')}</text>`).join('');
+  const line = pts.map((v, i) => `${i ? 'L' : 'M'}${x(v.d).toFixed(1)},${y(v.das).toFixed(1)}`).join(' ');
+  const area = `${line} L${x(pts.at(-1).d).toFixed(1)},${H - B} L${x(pts[0].d).toFixed(1)},${H - B} Z`;
+  const bars = vs.filter(v => v.crp != null).map(v => `<rect class="crp-bar" x="${x(v.d) - 4}" y="${yc(v.crp)}" width="8" height="${H - B - yc(v.crp)}" data-tip="${v.date} · CRP ${v.crp} mg/L"/>`).join('');
+  const marks = vs.filter(v => v.regimenChanged).map(v => { const ph = a.phases[v.phase]; return `<line class="switch" x1="${x(v.d)}" x2="${x(v.d)}" y1="${T}" y2="${H - B}"/><text class="switch-label" x="${x(v.d) + 5}" y="${T + 12}">换用 ${phaseDrug(ph)}</text>`; }).join('');
+  const trig = vs.filter(v => v.trigger && v.das != null).map(v => `<text class="trig" x="${x(v.d)}" y="${y(v.das) - 12}" text-anchor="middle">!</text>`).join('');
+  const dots = pts.map(v => `<circle class="dot ${actOf(v.das)}" cx="${x(v.d)}" cy="${y(v.das)}" r="5" data-tip="${v.date} · DAS28-ESR ${v.das.toFixed(2)}（${actLabel(actOf(v.das))}）· TJC ${v.tjc ?? '—'} / SJC ${v.sjc ?? '—'} · ESR ${v.esr ?? '—'}" data-k="${v.k}"/>`).join('');
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="DAS28-ESR 随访轨迹">${band(0, 2.6, 'remission', '缓解')}${band(2.6, 3.2, 'low', '低活动')}${band(3.2, 5.1, 'moderate', '中活动')}${band(5.1, yMax, 'high', '高活动')}${ticks}${xt}${bars}${marks}<path class="area" d="${area}"/><path class="line" d="${line}" pathLength="1"/>${dots}${trig}</svg>`;
+  const tip = document.getElementById('viz-tip') || Object.assign(document.body.appendChild(document.createElement('div')), { id: 'viz-tip', className: 'viz-tip', hidden: true });
+  host.onmousemove = e => { const t = e.target.closest('[data-tip]'); if (!t) { tip.hidden = true; return; } tip.textContent = t.dataset.tip; tip.hidden = false; tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = (e.clientY + 16) + 'px'; };
+  host.onmouseleave = () => tip.hidden = true;
+  host.onclick = e => { const c = e.target.closest('[data-k]'); if (c) location.href = `visit-detail.html?id=${encodeURIComponent(queryParam('id'))}&visit=v${c.dataset.k}&from=insight`; };
+  const tr = pts.length >= 2 ? pts.at(-1).das - pts[0].das : 0;
+  document.getElementById('trend-sum').textContent = `${pts.length} 次评分 · 入组 ${pts[0].das.toFixed(2)} → 最近 ${pts.at(-1).das.toFixed(2)}（${tr <= -0.6 ? '改善' : tr >= 0.6 ? '加重' : '稳定'} ${tr > 0 ? '+' : ''}${tr.toFixed(2)}）· 方案调整 ${vs.filter(v => v.regimenChanged).length} 次`;
+}

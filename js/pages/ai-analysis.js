@@ -11,11 +11,11 @@ $('#examples').addEventListener('click', e => { const b = e.target.closest('[dat
 // 个体分析：选择患者 → 病程分析
 bindPatientPicker($('#picker'), $('#picker-list'), p => location.href = `patient-insight.html?id=${encodeURIComponent(p.id)}&from=ai`);
 
-// 研究库速览：每个指标都是一个预设队列
+// 研究数据库速览：每个指标都是一个预设队列
 const s = cohortStats(patients);
 const n = f => applyFilters({ ...AI_FILTER_DEFAULT, ...f }).length;
 const tiles = [
-  ['研究库患者', patients.length, '人', `女性 ${s.female}% · 年龄中位 ${s.ageMedian} 岁`, ''],
+  ['研究数据库患者', patients.length, '人', `女性 ${s.female}% · 年龄中位 ${s.ageMedian} 岁`, ''],
   ['当前达标率', s.target, '%', 'DAS28 ≤ 3.2', 'act=target'],
   ['未达标患者', n({ act: 'mod-high' }), '人', '中高疾病活动', 'act=mod-high'],
   ['合并纤维肌痛', n({ cm: 'FM' }), '人', 'DAS28 可能被抬高', 'cm=FM'],

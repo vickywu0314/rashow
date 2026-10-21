@@ -1,10 +1,10 @@
 /* AI 智能分析（共享模块）：ai-analysis / ai-cohort / ai-chat 共用。
-   包含：分析用演示数据、队列筛选、问题解析、统计与发现生成、图表渲染。
+   包含：治疗分类、队列筛选、问题解析、统计与发现生成、图表渲染。
    依赖 data.js → common.js；需在页面脚本之前加载。
-   注意：当前未接入 AI 引擎——“问题解析”为关键词规则，“发现”为规则计算；接入模型后替换 parseQuestion / buildInsights。 */
+   问题解析 parseQuestion 将自然语言转为筛选条件；发现 buildInsights 只描述差异，不做因果判断。 */
 "use strict";
 
-/* ---------- 1. 分析用演示数据（按患者序号确定性生成，刷新不变） ---------- */
+/* ---------- 1. 治疗分类与疾病活动分层 ---------- */
 const AI_TX = {
   csDMARD: { label: 'csDMARD', drugs: ['甲氨蝶呤 15 mg/w', '甲氨蝶呤 + 羟氯喹', '来氟米特 20 mg/d'], resp: 1.6 },
   TNFi: { label: 'TNFi', drugs: ['阿达木单抗', '依那西普', '英夫利昔单抗'], resp: 1.9 },
@@ -24,37 +24,9 @@ const actOf = das => das == null ? null : das < 2.6 ? 'remission' : das <= 3.2 ?
 const actLabel = k => (AI_ACT.find(a => a.key === k) || {}).label || '—';
 const atTarget = das => das != null && das <= 3.2;
 
-const _rnd = (i, k) => { const x = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x); };
 const r1 = v => Math.round(v * 10) / 10;
-const AI_DATA = new Map();
-patients.forEach((p, i) => {
-  const cls = ['csDMARD', 'csDMARD', 'csDMARD', 'TNFi', 'TNFi', 'JAKi', 'JAKi', 'IL-6i', 'Abatacept'][Math.floor(_rnd(i, 1) * 9)];
-  const fm = !!(p.comorbid && p.comorbid.FM);
-  const months = 3 + Math.floor(_rnd(i, 2) * 30);
-  const das0 = 3.9 + _rnd(i, 3) * 2.6;
-  const drop = AI_TX[cls].resp * (0.4 + _rnd(i, 4) * 1.3);
-  const fmAdd = fm ? 0.7 : 0;
-  const das6 = months >= 6 ? Math.max(1.9, das0 - drop * 0.8 + fmAdd) : null;
-  // 约 15% 治疗满 9 个月的患者在 6 个月后出现疾病活动回升（演示反弹场景）
-  const rebound = months >= 9 && _rnd(i, 14) > 0.85;
-  const dasNow = rebound ? das6 + 0.6 + _rnd(i, 15) * 0.8 : Math.max(1.8, das0 - drop + fmAdd);
-  const crp0 = 6 + _rnd(i, 5) * 34;
-  const crpNow = crp0 * (1 - Math.min(0.9, drop / 2.5)) * (rebound ? 1.8 : 1) + _rnd(i, 6) * 4;
-  AI_DATA.set(p.id, {
-    tx: cls, drug: AI_TX[cls].drugs[Math.floor(_rnd(i, 7) * AI_TX[cls].drugs.length)],
-    line: cls === 'csDMARD' ? 1 : (_rnd(i, 8) > 0.6 ? 3 : 2),
-    months, das0: r1(das0), das6: das6 == null ? null : r1(das6), dasNow: r1(dasNow),
-    crp0: r1(crp0), crpNow: r1(crpNow),
-    tjc: Math.round(Math.max(0, (dasNow - 2) * 2.2 + (fm ? 4 : 0) + _rnd(i, 9) * 2)),
-    sjc: Math.round(Math.max(0, (dasNow - fmAdd - 2.2) * 1.6 + _rnd(i, 10) * 1.5)),
-    vas: Math.min(100, Math.round(20 + dasNow * 9 + (fm ? 15 : 0) + _rnd(i, 11) * 8)),
-    haq: r1(0.2 + dasNow * 0.22 + (fm ? 0.3 : 0)),
-    sero: _rnd(i, 12) > 0.25,
-    duration: 1 + Math.floor(_rnd(i, 13) * 15),
-    age: 2026 - p.year
-  });
-});
-const aiOf = p => AI_DATA.get(p.id);
+// 分析字段直接取自患者病程（common.js 的 courseOf）：当前方案、方案起始 / 6 个月 / 最近一次的 DAS28 与检验
+const aiOf = p => courseOf(p);
 
 /* ---------- 2. 筛选条件 ---------- */
 const AI_FILTER_DEFAULT = { sex: '', age: '', sero: '', tx: '', at: 'now', act: '', cm: '', data: '', ids: '' };
@@ -65,7 +37,7 @@ const AI_FILTER_LABELS = {
   tx: v => v === 'bio' ? '生物 / 靶向治疗' : `当前治疗：${v}`,
   at: v => v === '6m' ? '评估时点：治疗 6 个月' : '',
   act: v => ({ remission: '缓解', low: '低疾病活动', moderate: '中疾病活动', high: '高疾病活动', 'mod-high': '中高疾病活动（未达标）', target: '已达标（缓解 / 低活动）' })[v],
-  cm: v => v === 'none' ? '无合并 FM / AS' : `合并 ${v}`,
+  cm: v => v === 'none' ? '无合并疾病' : `合并 ${v} ${(COMORBIDITY_INFO[v] || {}).name || ''}`.trim(),
   data: v => v === 'missing' ? '资料待补全' : '资料完整',
   ids: v => `指定患者 ${v.split(',').length} 位`
 };
@@ -106,7 +78,7 @@ function applyFilters(f, list = patients) {
   });
 }
 
-/* ---------- 3. 问题解析（关键词规则，演示） ---------- */
+/* ---------- 3. 问题解析：自然语言 → 筛选条件 ---------- */
 function parseQuestion(text) {
   const t = (text || '').replace(/\s+/g, '');
   const f = { ...AI_FILTER_DEFAULT };
@@ -128,6 +100,12 @@ function parseQuestion(text) {
   const age = t.match(/(\d{2})[-~–至到](\d{2})岁/) || t.match(/(\d{2})岁以上/);
   if (age) on('age', age[2] ? `${age[1]}-${age[2]}` : `${age[1]}-`, age[0]);
   if (/纤维肌痛|FM/i.test(t)) on('cm', 'FM', 'FM');
+  else if (/间质性肺|肺间质|ILD/i.test(t)) on('cm', 'RA-ILD', '间质性肺病');
+  else if (/干燥/.test(t)) on('cm', 'SjS', '干燥综合征');
+  else if (/骨质疏松|骨松/.test(t)) on('cm', 'OP', '骨质疏松');
+  else if (/糖尿病/.test(t)) on('cm', 'T2DM', '糖尿病');
+  else if (/高血压/.test(t)) on('cm', 'HTN', '高血压');
+  else if (/肌少症/.test(t)) on('cm', 'RA-MS', '肌少症');
   else if (/强直|AS\b/i.test(t)) on('cm', 'AS', 'AS');
   if (/血清阳性|RF|ACPA|抗CCP/i.test(t)) on('sero', '1', '血清阳性');
   if (/缺失|待补全|不完整/.test(t)) on('data', 'missing', '资料待补全');
@@ -136,7 +114,7 @@ function parseQuestion(text) {
 
 /* ---------- 4. 统计 ---------- */
 const median = xs => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
-const mean = xs => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+const mean = xs => { xs = xs.filter(x => x != null && !isNaN(x)); return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null; };
 const pct = (n, d) => d ? Math.round(n / d * 100) : 0;
 function cohortStats(list, at = 'now') {
   const A = list.map(aiOf);
@@ -174,7 +152,7 @@ function buildInsights(list, at = 'now') {
   if (!list.length) return out;
   out.push({
     kind: s.target >= lib.target ? 'good' : 'warn', tag: '达标情况',
-    title: `队列达标率 ${s.target}%，研究库整体 ${lib.target}%`,
+    title: `队列达标率 ${s.target}%，研究数据库整体 ${lib.target}%`,
     text: `${s.evaluable} 位可评估患者中 ${Math.round(s.evaluable * s.target / 100)} 位 DAS28 ≤ 3.2（低疾病活动或缓解）。`,
     evidence: `评估时点：${at === '6m' ? '治疗 6 个月' : '最近一次访视'} · 阈值 DAS28-ESR ≤ 3.2`
   });

@@ -209,3 +209,43 @@
     height:70vh;
   }
 }
+
+/* ===== v2 对话页（深度思考 + 流式输出） ===== */
+.chat-layout{align-items:stretch}
+.chat-side{display:flex;flex-direction:column;max-height:calc(100vh - 200px);overflow:auto}
+.new-chat{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-bottom:18px;padding:10px 12px;border:1px solid #d9d0fb;border-radius:10px;background:#f6f3ff;color:#5137c7;font:inherit;font-size:var(--fs-sm);font-weight:600;cursor:pointer}
+.new-chat:hover{background:#efe9ff}
+.new-chat svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.history-list{display:grid;gap:2px}
+.history-list .h-group{margin:8px 0 4px;color:#9aa7b7;font-size:11px}
+.history-list button{display:block;width:100%;text-align:left;border:0;background:none;padding:7px 10px;border-radius:8px;color:#45566d;font:inherit;font-size:var(--fs-xs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.history-list button:hover{background:#f1f4f9}
+.history-list button.active{background:#eef0fb;color:#3c2ca8;font-weight:600}
+.chat-main{display:flex;flex-direction:column;height:calc(100vh - 200px);min-height:560px;padding:0;overflow:hidden}
+.chat-log{flex:1;overflow:auto;padding:24px 8% 12px;display:flex;flex-direction:column;gap:22px;scroll-behavior:auto}
+.chat-welcome{margin:auto;text-align:center;max-width:680px;padding:20px 0}
+.chat-welcome[hidden]{display:none}
+.welcome-mark{width:56px;height:56px;margin:0 auto 14px;border-radius:16px;background:linear-gradient(135deg,#6d5ce8,#2f7bf0);display:grid;place-items:center;box-shadow:0 10px 26px #4b5bdc33}
+.welcome-mark svg{width:30px;height:30px;fill:none;stroke:#fff;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
+.chat-welcome h2{margin:0 0 8px;font-size:22px}
+.chat-welcome p{margin:0 0 22px;color:#7b8a9e}
+.welcome-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;text-align:left}
+.welcome-cards button{border:1px solid #e3e8f0;background:#fff;border-radius:12px;padding:12px 14px;font:inherit;font-size:var(--fs-sm);color:#33445a;cursor:pointer;line-height:1.5;transition:all .15s}
+.welcome-cards button:hover{border-color:#b9acf5;background:#faf9ff;transform:translateY(-1px)}
+.welcome-cards button small{display:block;color:#9aa7b7;font-size:11px;margin-bottom:2px}
+.msg-user{align-self:flex-end;max-width:72%;background:#eef3fb;color:#1f2d3d;padding:10px 15px;border-radius:16px 16px 4px 16px;line-height:1.7;white-space:pre-wrap;font-size:var(--fs-md)}
+.msg-ai{display:grid;grid-template-columns:32px minmax(0,1fr);gap:12px;align-items:start}
+.msg-ai .avatar-ai{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6d5ce8,#2f7bf0);display:grid;place-items:center}
+.msg-ai .avatar-ai svg{width:17px;height:17px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linejoin:round}
+.msg-ai .ai-body{min-width:0;font-size:var(--fs-md)}
+.msg-sys{align-self:center;color:#9aa7b7;font-size:var(--fs-xs);background:#f5f7fa;padding:4px 12px;border-radius:12px}
+.chat-compose{display:block!important;padding:10px 8% 14px;border-top:0!important;background:linear-gradient(180deg,#fff0,#fff 30%)}
+.compose-box{border:1px solid #d6deea;border-radius:18px;padding:12px 14px 10px;background:#fff;box-shadow:0 4px 18px rgba(31,55,88,.07);transition:border-color .15s,box-shadow .15s}
+.compose-box:focus-within{border-color:#9db8e8;box-shadow:0 4px 22px rgba(31,90,200,.12)}
+.compose-box textarea{width:100%;border:0;outline:0;resize:none;font:inherit;font-size:var(--fs-md);line-height:1.6;min-height:28px;max-height:180px;background:transparent;padding:2px 2px 8px}
+.compose-bar{display:flex;align-items:center;justify-content:space-between}
+.compose-tools{display:flex;gap:8px}
+.chat-compose .ai-send{background:#4d6bfe}
+.chat-compose .ai-send:disabled{background:#c5cfe0;opacity:1}
+.compose-note{margin:8px 0 0;text-align:center;color:#a3afbe;font-size:11px}
+@media (max-width:1100px){.chat-log,.chat-compose{padding-left:20px;padding-right:20px}.welcome-cards{grid-template-columns:1fr}}

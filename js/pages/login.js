@@ -1,4 +1,4 @@
-/* login.html 页面脚本（依赖 boot.js）。演示版：账号写在前端，接入后端后改为登录接口。 */
+/* login.html 页面脚本（依赖 boot.js）。账号暂配置在前端，接入后端后改为登录接口。 */
 "use strict";
 const DEMO_USERS = [
   { username: 'chen', password: 'ra2026', name: '陈医生', role: '研究者' },
@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('pw-toggle').onclick = e => { const b = e.currentTarget, on = pw.type === 'password'; pw.type = on ? 'text' : 'password'; b.setAttribute('aria-pressed', String(on)); b.setAttribute('aria-label', on ? '隐藏密码' : '显示密码'); pw.focus(); };
   pw.addEventListener('keyup', e => { document.getElementById('caps-tip').hidden = !(e.getModifierState && e.getModifierState('CapsLock')); });
   document.getElementById('forgot').onclick = () => showErr('请联系项目数据管理员重置密码。');
-  document.querySelector('.demo-accounts').addEventListener('click', e => { const b = e.target.closest('[data-u]'); if (!b) return; user.value = b.dataset.u; pw.value = b.dataset.p; showErr(''); });
+  document.querySelector('.demo-accounts')?.addEventListener('click', e => { const b = e.target.closest('[data-u]'); if (!b) return; user.value = b.dataset.u; pw.value = b.dataset.p; showErr(''); });
   form.addEventListener('submit', e => {
     e.preventDefault();
     const u = user.value.trim(), p = pw.value;

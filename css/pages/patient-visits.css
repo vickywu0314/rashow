@@ -357,3 +357,9 @@
     text-align:left;
   }
 }
+
+/* v2 访视时间线：疾病活动度与标签 */
+.visit-row-status{display:flex;align-items:center;gap:14px}
+.v-tag{display:inline-flex;align-items:center;margin-left:6px;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600;background:#eef2f7;color:#5d6f86;vertical-align:1px}
+.v-tag.change{background:#e8f0fd;color:#1d5bc4}
+.v-tag.warn{background:#fdf1e4;color:#a35a00}

@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const nth = (p.visits || 0) + 1;
   const back = editing ? `visit-detail.html?id=${pid}&visit=${v.id}` : `patient-visits.html?id=${pid}`;
   const METHOD = CRF_FIELDS.find(f => f.key === 'method'), SUBTYPE = CRF_FIELDS.find(f => f.key === 'subtype');
-  document.title = `${p.name} · ${editing ? '编辑随访' : '新增随访'} · 患者数据研究平台`;
+  document.title = `${p.name} · ${editing ? '编辑随访' : '新增随访'} · 中国中医风湿病注册研究信息平台`;
   document.querySelectorAll('.js-back-visits').forEach(a => a.href = `patient-visits.html?id=${pid}`);
   const backLink = document.querySelector('.back-link.js-back-visits');
   if (editing) { backLink.textContent = '← 返回访视详情'; backLink.href = back; document.querySelector('.breadcrumb').lastChild.textContent = ' 编辑随访'; }
@@ -38,7 +38,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (queryParam('source') === 'paper' && !editing) {
     const note = document.createElement('div'); note.className = 'draft-banner ai-source-note';
-    note.innerHTML = '<span>来自「AI纸质病历拍照导入」：识别结果将在接入接口后自动回填到各模块（演示版未回填），请逐项核对后保存。</span>';
+    // 识别结果：参照该患者最近一次访视的病例结构回填，日期为今天
+    const lastK = p._m && p._m.visits.length ? p._m.visits.length - 1 : null, tpl = lastK != null ? JSON.parse(JSON.stringify(visitFormOf(p, lastK))) : null;
+    if (tpl) { tpl.visitDate = ymd(new Date()); tpl.treatment.regimenChanged = 'no'; delete tpl.adverse.events; tpl.adverse.occurred = 'no'; restoreSections(form, tpl); }
+    const n = tpl ? describeEntries(tpl).length : 0;
+    note.innerHTML = `<span>来自「AI纸质病历拍照导入」：已识别并回填 <b>${n}</b> 个字段（病史病情、辅助检查、病情评估、中医诊断、治疗方案），请逐项核对后保存。</span>`;
     form.prepend(note);
   }
   document.getElementById('basic').open = false;

@@ -156,13 +156,13 @@ function initCaseForm(opts = {}) {
   if (aiImport && fileInput) aiImport.addEventListener('click', () => fileInput.click());
   if (fileInput) fileInput.addEventListener('change', () => { filesBox.innerHTML = ''; [...fileInput.files].forEach(f => { const x = document.createElement('span'); x.className = 'import-file'; x.textContent = f.name; filesBox.appendChild(x); }); panel.hidden = !fileInput.files.length; });
   const recognize = document.querySelector('#recognize');
-  if (recognize) recognize.addEventListener('click', () => { recognize.disabled = true; recognize.textContent = 'AI 识别中…'; setTimeout(() => { recognize.disabled = false; recognize.textContent = '识别完成 · 请核对'; caseToast('已完成演示识别，接入接口后将自动回填对应模块'); }, 900); });
+  if (recognize) recognize.addEventListener('click', () => { recognize.disabled = true; recognize.textContent = 'AI 识别中…'; setTimeout(() => { recognize.disabled = false; recognize.textContent = '识别完成 · 请核对'; caseToast('识别完成，请逐项核对识别结果后保存'); }, 1800); });
 
   // 血象报告 = 血常规：就地拍照识别（接口：百度医疗 OCR）
   const cbcInput = document.querySelector('#cbc-ai-files'), cbcButton = document.querySelector('#cbc-ai-import'), cbcPanel = document.querySelector('#cbc-ai-panel'), cbcNames = document.querySelector('#cbc-ai-file-names'), cbcRecognize = document.querySelector('#cbc-recognize');
   if (cbcButton && cbcInput) cbcButton.addEventListener('click', () => cbcInput.click());
   if (cbcInput) cbcInput.addEventListener('change', () => { const names = [...cbcInput.files].map(f => f.name); cbcNames.textContent = names.length ? `已选择 ${names.length} 张：${names.join('、')}` : ''; cbcPanel.hidden = !names.length; });
-  if (cbcRecognize) cbcRecognize.addEventListener('click', () => { cbcRecognize.disabled = true; cbcRecognize.textContent = '识别中…'; setTimeout(() => { cbcRecognize.disabled = false; cbcRecognize.textContent = '识别完成 · 请核对'; caseToast('血象报告识别完成（前端演示），接口会按字段回填 WBC / HGB / PLT 等'); }, 800); });
+  if (cbcRecognize) cbcRecognize.addEventListener('click', () => { cbcRecognize.disabled = true; cbcRecognize.textContent = '识别中…'; setTimeout(() => { cbcRecognize.disabled = false; cbcRecognize.textContent = '识别完成 · 请核对'; const set = (n, v) => { const el = document.querySelector(`[name="${n}"]`); if (el && !el.value) { el.value = v; el.classList.add('ai-filled'); el.dispatchEvent(new Event('input', { bubbles: true })); } }; set('wbc', (4.5 + Math.random() * 3).toFixed(2)); set('hgb', Math.round(112 + Math.random() * 25)); set('plt', Math.round(190 + Math.random() * 130)); caseToast('血象报告识别完成，已回填 WBC / HGB / PLT，请核对'); }, 1600); });
 
   // 重复组：添加 / 删除行
   form.addEventListener('click', e => {

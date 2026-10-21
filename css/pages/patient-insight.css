@@ -597,3 +597,27 @@
   color:#6d5424;
   font-size:var(--fs-sm);
 }
+
+/* v2 疾病活动轨迹 */
+.trend-chart svg{width:100%;height:auto;display:block}
+.trend-chart .band.remission{fill:#e9f6ef}.trend-chart .band.low{fill:#f1f8e8}.trend-chart .band.moderate{fill:#fdf6e9}.trend-chart .band.high{fill:#fcefee}
+.trend-chart .band-label{font-size:11px;fill:#9aa7b7}
+.trend-chart .grid{stroke:#e6ecf3;stroke-dasharray:3 4}
+.trend-chart .axis{font-size:11px;fill:#8a98ac}
+.trend-chart .area{fill:#0b5ccc10}
+.trend-chart .line{fill:none;stroke:#0b5ccc;stroke-width:2.4;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;animation:drawLine 1.2s ease forwards}
+@keyframes drawLine{to{stroke-dashoffset:0}}
+.trend-chart .dot{stroke:#fff;stroke-width:2;cursor:pointer;transition:r .15s}
+.trend-chart .dot:hover{r:7}
+.trend-chart .dot.remission{fill:#1f9d63}.trend-chart .dot.low{fill:#6cbf3a}.trend-chart .dot.moderate{fill:#e09a1a}.trend-chart .dot.high{fill:#d0453b}
+.trend-chart .crp-bar{fill:#b9c9df;opacity:.7}
+.trend-chart .crp-bar:hover{opacity:1;fill:#8aa6cc}
+.trend-chart .switch{stroke:#7a5ad8;stroke-width:1.5;stroke-dasharray:4 3}
+.trend-chart .switch-label{font-size:11px;fill:#6a4cc7;font-weight:600}
+.trend-chart .trig{font-size:13px;font-weight:800;fill:#c2413a}
+.trend-legend{display:flex;gap:14px;flex-wrap:wrap;color:#6b7d96;font-size:var(--fs-xs);align-items:center}
+.trend-legend span{display:inline-flex;align-items:center;gap:6px}
+.lg-line{width:18px;height:2.5px;background:#0b5ccc;border-radius:2px;display:inline-block}
+.lg-bar{width:8px;height:12px;background:#b9c9df;display:inline-block;border-radius:1px}
+.lg-switch{width:0;height:14px;border-left:1.5px dashed #7a5ad8;display:inline-block}
+.lg-trig{color:#c2413a;font-weight:800}
