@@ -46,7 +46,19 @@ document.addEventListener('DOMContentLoaded', () => {
     form.prepend(note);
   }
   document.getElementById('basic').open = false;
-  const first = document.getElementById('history'); if (first) first.open = true;
+  // 从数据质控提示进入：打开问题所在模块并标出需要补录 / 更正的字段
+  const QCR = queryParam('qc'), QC_SEC = { 'QC-M01': 'assessment', 'QC-M02': 'exam', 'QC-M04': 'treatment', 'QC-L01': 'treatment' }[QCR];
+  const first = document.getElementById(QC_SEC || 'history'); if (first) first.open = true;
+  if (QC_SEC) {
+    const f = visitForm(p.id, v ? v.id : '') || {}, vd = f.visitDate || (v && v.date);
+    const targets = { 'QC-M01': ['tjc28', 'sjc28'], 'QC-M02': ['esr', 'crp'], 'QC-M04': [], 'QC-L01': ['startDate'] }[QCR];
+    const els = targets.flatMap(n => [...first.querySelectorAll(`[name="${n}"]`)]).filter(el => QCR !== 'QC-L01' || (el.value && el.value > vd));
+    els.forEach(el => el.closest('.form-field')?.classList.add('qc-field'));
+    const note = document.createElement('div'); note.className = 'draft-banner qc-source-note';
+    note.innerHTML = `<span><b>正在处理质控问题 ${QCR}</b>：${{ 'QC-M01': '请补录压痛关节数 TJC28、肿胀关节数 SJC28，保存后 DAS28 自动计算。', 'QC-M02': '请补录 ESR 或 CRP 至少一项。', 'QC-M04': '请在「用药明细」中补录基线用药。', 'QC-L01': `红框中的用药起始日期晚于本次访视日期 ${vd}，请核对后更正。` }[QCR]}保存后该问题自动解除。</span>`;
+    form.prepend(note);
+    setTimeout(() => { (els[0] || first).scrollIntoView({ block: 'center' }); els[0]?.focus(); }, 60);
+  }
   if (editing) document.querySelector('.create-footer .button.primary').textContent = '保存修改';
 
   initCaseForm({

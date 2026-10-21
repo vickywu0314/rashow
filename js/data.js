@@ -321,6 +321,7 @@ function makePatient(i) {
   if (visits.length && t.chance(0.062)) missing = t.w([['缺 DAS28 评分', 34], ['缺基线检验', 26], ['缺用药史', 22], ['缺合并疾病记录', 18]]);
   if (missing === '缺 DAS28 评分') Object.assign(visits[0], { das: null, dasCrp: null, tjc: null, sjc: null });
   if (missing === '缺基线检验') Object.assign(visits[0], { esr: null, crp: null, das: null, dasCrp: null });
+  if (missing === '缺合并疾病记录') Object.keys(comorbid).forEach(k => delete comorbid[k]);
   const comorbidNone = !Object.keys(comorbid).length && missing !== '缺合并疾病记录';
   // 逻辑冲突（QC-L01）：约 1.3% 患者最近一次访视的用药起始日期晚于访视日期
   const logicConflict = visits.length >= 2 && t.chance(0.013);

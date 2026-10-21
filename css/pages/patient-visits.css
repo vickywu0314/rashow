@@ -363,3 +363,16 @@
 .v-tag{display:inline-flex;align-items:center;margin-left:6px;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600;background:#eef2f7;color:#5d6f86;vertical-align:1px}
 .v-tag.change{background:#e8f0fd;color:#1d5bc4}
 .v-tag.warn{background:#fdf1e4;color:#a35a00}
+
+/* v2 从数据质控跳入：合并疾病未记录 */
+.qc-alert{margin:0 0 16px;padding:14px 16px;border:1px solid #f1cf9a;border-left:4px solid #e0a43a;border-radius:10px;background:#fffaf2;grid-column:1/-1}
+.qc-alert-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.qc-alert-state{margin-left:auto;font-size:var(--fs-xs);font-weight:700;color:#a35a00;background:#fdf1e0;padding:2px 9px;border-radius:10px}
+.qc-alert-state.done{color:#16794c;background:#e3f5ec}
+.qc-alert dl{margin:0;display:grid;gap:6px}
+.qc-alert dl div{display:grid;grid-template-columns:72px 1fr;gap:10px;font-size:var(--fs-sm);line-height:1.65}
+.qc-alert dt{color:#8a98ab}.qc-alert dd{margin:0;color:#33445a}
+.qc-alert-actions{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.qc-mark{background:none;border:1.5px solid #d0453b;border-radius:3px;padding:0 3px;color:#b23a31}
+code.rule-code{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#eef2f7;color:#4d5d72;padding:1px 6px;border-radius:5px;margin-right:6px}
+.reference-history.has-qc>div:nth-child(2){outline:1.5px solid #d0453b;outline-offset:6px;border-radius:8px}

@@ -755,3 +755,32 @@
 .drug-row em.brand{font-style:normal;color:#8193aa;font-weight:500;font-size:var(--fs-xs)}
 .status-dot.bad{background:#d0453b}
 .ae-card h3 em.sae{font-style:normal;background:#fbe6e4;color:#b23a31;font-size:11px;padding:1px 6px;border-radius:8px;margin-left:6px}
+
+/* v2 从数据质控跳入：质控提示与问题字段高亮 */
+.qc-alert{margin:0 0 16px;padding:14px 16px;border:1px solid #f1cf9a;border-left:4px solid #e0a43a;border-radius:10px;background:#fffaf2}
+.qc-alert.bad{border-color:#f0c3bf;border-left-color:#d0453b;background:#fff6f5}
+.qc-alert-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.qc-alert-head b{font-size:var(--fs-md)}
+.qc-alert-state{margin-left:auto;font-size:var(--fs-xs);font-weight:700;color:#a35a00;background:#fdf1e0;padding:2px 9px;border-radius:10px}
+.qc-alert-state.done{color:#16794c;background:#e3f5ec}
+.qc-alert dl{margin:0;display:grid;gap:6px}
+.qc-alert dl div{display:grid;grid-template-columns:72px 1fr;gap:10px;font-size:var(--fs-sm);line-height:1.65}
+.qc-alert dt{color:#8a98ab}
+.qc-alert dd{margin:0;color:#33445a}
+.qc-alert dl div:first-child dd{font-weight:650;color:#1f2d3d}
+.qc-alert-actions{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.qc-mark{background:none;border:1.5px solid #d0453b;border-radius:3px;padding:0 3px;color:#b23a31}
+code.rule-code{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#eef2f7;color:#4d5d72;padding:1px 6px;border-radius:5px;margin-right:6px}
+.detail-section.has-qc{box-shadow:0 0 0 2px #f0c3bf}
+.section-check.qc{background:#d0453b!important;color:#fff!important}
+.detail-anchor a.qc{color:#b23a31}
+.detail-anchor a.qc i{background:#d0453b;color:#fff;border-color:#d0453b}
+.metric-row.qc-miss{outline:1.5px solid #d0453b;outline-offset:2px;border-radius:6px;background:#fff5f4}
+.metric-row.qc-miss strong{color:#b23a31!important;font-weight:700!important}
+.metric-row.qc-miss em{color:#b23a31}
+.qc-miss-box{outline:1.5px solid #d0453b;outline-offset:-1px;background:#fff5f4!important}
+.qc-miss-box strong{color:#b23a31}
+.drug-row.qc-bad{outline:1.5px solid #d0453b;outline-offset:2px;border-radius:8px;background:#fff5f4}
+.qc-inline{color:#b23a31;text-decoration:underline wavy #d0453b;text-underline-offset:3px}
+.drug-row small.qc-why{display:block;color:#b23a31;font-weight:600;margin-top:2px}
+.qc-empty{padding:12px;border:1.5px dashed #d0453b;border-radius:8px;color:#b23a31;background:#fff5f4;font-weight:600}

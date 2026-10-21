@@ -819,3 +819,6 @@
   }
 }
 .ai-filled{background:#f3f0ff!important;border-color:#b9acf5!important;transition:background 1.5s}
+.qc-field input,.qc-field select{border-color:#d0453b!important;background:#fff5f4!important;box-shadow:0 0 0 3px #d0453b1f}
+.qc-field>span{color:#b23a31;font-weight:600}
+.qc-source-note{border-color:#f0c3bf!important;background:#fff6f5!important;color:#7d2a24}
