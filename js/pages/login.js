@@ -9,7 +9,7 @@ const DEMO_USERS = [
   { username: 'wang', password: 'ra2026', name: '王芳', role: '研究协调员' },
   { username: 'sun', password: 'ra2026', name: '孙丽', role: '研究协调员' },
   { username: 'zhou', password: 'ra2026', name: '周敏', role: '临床监查员' },
-  { username: 'demo', password: 'demo2026', name: '演示用户', role: '研究者' }
+  { username: 'wu', password: 'ra2026', name: '吴医生', role: '研究者' }
 ];
 const REMEMBER_KEY = 'ra-remember-user';
 document.addEventListener('DOMContentLoaded', () => {
