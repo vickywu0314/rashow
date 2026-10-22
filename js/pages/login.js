@@ -2,7 +2,14 @@
 "use strict";
 const DEMO_USERS = [
   { username: 'chen', password: 'ra2026', name: '陈医生', role: '研究者' },
-  { username: 'admin', password: 'ra2026', name: '李敏', role: '数据管理员' }
+  { username: 'admin', password: 'ra2026', name: '李敏', role: '数据管理员' },
+  { username: 'zhang', password: 'ra2026', name: '张主任', role: '主要研究者' },
+  { username: 'liu', password: 'ra2026', name: '刘医生', role: '研究者' },
+  { username: 'zhao', password: 'ra2026', name: '赵医生', role: '研究者' },
+  { username: 'wang', password: 'ra2026', name: '王芳', role: '研究协调员' },
+  { username: 'sun', password: 'ra2026', name: '孙丽', role: '研究协调员' },
+  { username: 'zhou', password: 'ra2026', name: '周敏', role: '临床监查员' },
+  { username: 'demo', password: 'demo2026', name: '演示用户', role: '研究者' }
 ];
 const REMEMBER_KEY = 'ra-remember-user';
 document.addEventListener('DOMContentLoaded', () => {
